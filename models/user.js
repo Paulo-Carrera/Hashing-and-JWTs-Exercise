@@ -42,7 +42,7 @@ class User {
     static async updateLoginTimestamp(username) {
         const result = await db.query(
             `UPDATE users
-            SET last_login_at = current_timestamp
+            SET last_login_at = NOW()
             WHERE username = $1
             RETURNING username, last_login_at`,
             [username]

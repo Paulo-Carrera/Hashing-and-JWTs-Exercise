@@ -10,7 +10,7 @@ const User = require('../models/user');
 
 router.get('/', async function(req, res, next){
     try{
-        return res.json({ users : await User.getAll() });
+        return res.json({ users : await User.all() });
     }catch(err){
         return next(err);
     }

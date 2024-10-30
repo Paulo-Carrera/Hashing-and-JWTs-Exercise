@@ -2,37 +2,45 @@ const db = require("../db");
 const User = require("../models/user");
 const Message = require("../models/message");
 
-
 describe("Test Message class", function () {
-
   beforeEach(async function () {
+    // Clean up the tables without causing foreign key issues
     await db.query("DELETE FROM messages");
     await db.query("DELETE FROM users");
     await db.query("ALTER SEQUENCE messages_id_seq RESTART WITH 1");
 
-    let u1 = await User.register({
+    // Register two users
+    await User.register({
       username: "test1",
       password: "password",
       first_name: "Test1",
       last_name: "Testy1",
       phone: "+14155550000",
+      join_at: new Date(),
     });
-    let u2 = await User.register({
+
+    await User.register({
       username: "test2",
       password: "password",
       first_name: "Test2",
       last_name: "Testy2",
       phone: "+14155552222",
+      join_at: new Date(),
     });
-    let m1 = await Message.create({
+
+    // Create two messages with explicit sent_at
+    await Message.create({
       from_username: "test1",
       to_username: "test2",
-      body: "u1-to-u2"
+      body: "u1-to-u2",
+      sent_at: new Date(),
     });
-    let m2 = await Message.create({
+
+    await Message.create({
       from_username: "test2",
       to_username: "test1",
-      body: "u2-to-u1"
+      body: "u2-to-u1",
+      sent_at: new Date(),
     });
   });
 
@@ -40,7 +48,8 @@ describe("Test Message class", function () {
     let m = await Message.create({
       from_username: "test1",
       to_username: "test2",
-      body: "new"
+      body: "new",
+      sent_at: new Date(), // Explicitly provide sent_at
     });
 
     expect(m).toEqual({
@@ -56,13 +65,13 @@ describe("Test Message class", function () {
     let m = await Message.create({
       from_username: "test1",
       to_username: "test2",
-      body: "new"
+      body: "new",
+      sent_at: new Date(), // Explicitly provide sent_at
     });
     expect(m.read_at).toBe(undefined);
 
-    Message.markRead(m.id);
-    const result = await db.query("SELECT read_at from messages where id=$1",
-        [m.id]);
+    await Message.markRead(m.id); // Await markRead function
+    const result = await db.query("SELECT read_at from messages where id=$1", [m.id]);
     expect(result.rows[0].read_at).toEqual(expect.any(Date));
   });
 
@@ -89,6 +98,8 @@ describe("Test Message class", function () {
   });
 });
 
-afterAll(async function() {
+afterAll(async function () {
   await db.end();
 });
+
+

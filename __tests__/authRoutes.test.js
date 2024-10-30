@@ -5,14 +5,14 @@ const app = require("../app");
 const db = require("../db");
 const User = require("../models/user");
 
-
 describe("Auth Routes Test", function () {
-
   beforeEach(async function () {
     await db.query("DELETE FROM messages");
     await db.query("DELETE FROM users");
+    await db.query("ALTER SEQUENCE messages_id_seq RESTART WITH 1");
 
-    let u1 = await User.register({
+    // Register a test user for authentication
+    await User.register({
       username: "test1",
       password: "password",
       first_name: "Test1",
@@ -22,7 +22,6 @@ describe("Auth Routes Test", function () {
   });
 
   /** POST /auth/register => token  */
-
   describe("POST /auth/register", function () {
     test("can register", async function () {
       let response = await request(app)
@@ -32,19 +31,18 @@ describe("Auth Routes Test", function () {
           password: "secret",
           first_name: "Bob",
           last_name: "Smith",
-          phone: "+14150000000"
+          phone: "+14150000000",
         });
 
       let token = response.body.token;
       expect(jwt.decode(token)).toEqual({
         username: "bob",
-        iat: expect.any(Number)
+        iat: expect.any(Number),
       });
     });
   });
 
   /** POST /auth/login => token  */
-
   describe("POST /auth/login", function () {
     test("can login", async function () {
       let response = await request(app)
@@ -54,7 +52,7 @@ describe("Auth Routes Test", function () {
       let token = response.body.token;
       expect(jwt.decode(token)).toEqual({
         username: "test1",
-        iat: expect.any(Number)
+        iat: expect.any(Number),
       });
     });
 
@@ -65,7 +63,7 @@ describe("Auth Routes Test", function () {
       expect(response.statusCode).toEqual(400);
     });
 
-    test("won't login w/wrong password", async function () {
+    test("won't login w/not-existing user", async function () {
       let response = await request(app)
         .post("/auth/login")
         .send({ username: "not-user", password: "password" });
@@ -77,3 +75,6 @@ describe("Auth Routes Test", function () {
 afterAll(async function () {
   await db.end();
 });
+
+
+

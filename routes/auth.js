@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { SECRET_KEY } = require('../config');
 
 const User = require('../models/user');
+const ExpressError = require('../expressError');
 
 /** POST /login - login: {username, password} => {token}
  *
@@ -14,15 +15,19 @@ const User = require('../models/user');
 router.post('/login', async function(req, res, next){
     try{
         let { username, password } = req.body;
-        let user = await User.authenticate(username, password);
+        let isAuthenticated = await User.authenticate(username, password);
+        if(!isAuthenticated){
+            return res.status(400).json({message: "Invalid credentials"});
+        }
+
+        // If authentication successful, create token
         let token = jwt.sign({ username }, SECRET_KEY);
-        user.last_login_at = new Date();
-        await user.save();
+        await User.updateLoginTimestamp(username);
         return res.json({ token });
     }catch(err){
-        return next(err);
+        return res.status(500).json({ error : err.message });
     }
-})
+});
 
 
 
@@ -35,13 +40,14 @@ router.post('/login', async function(req, res, next){
 
 router.post('/register', async function(req, res, next){
     try{
-        let { username, password, first_name, last_name, phone } = req.body;
-        let user = await User.register({ username, password, first_name, last_name, phone });
-        let token = jwt.sign({ username }, SECRET_KEY);
-        user.last_login_at = new Date();
-        await user.save();
-        return res.json({ token });
+        const user = await User.register(req.body);
+        const token = jwt.sign({ username: user.username }, SECRET_KEY);
+        await User.updateLoginTimestamp(user.username);
+        return res.status(201).json({ token });
     }catch(err){
+        if(err.code === "23505"){
+            throw new ExpressError("Username taken", 400);
+        }
         return next(err);
     }
 });

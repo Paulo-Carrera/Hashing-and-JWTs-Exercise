@@ -2,12 +2,15 @@ const db = require("../db");
 const User = require("../models/user");
 const Message = require("../models/message");
 
-
 describe("Test User class", function () {
   beforeEach(async function () {
+    // Clean up the tables without causing foreign key issues
     await db.query("DELETE FROM messages");
     await db.query("DELETE FROM users");
-    let u = await User.register({
+    await db.query("ALTER SEQUENCE messages_id_seq RESTART WITH 1");
+
+    // Register a user to use in subsequent tests
+    await User.register({
       username: "test",
       password: "password",
       first_name: "Test",
@@ -33,17 +36,16 @@ describe("Test User class", function () {
     let isValid = await User.authenticate("test", "password");
     expect(isValid).toBeTruthy();
 
-    isValid =  await User.authenticate("test", "xxx");
+    isValid = await User.authenticate("test", "xxx");
     expect(isValid).toBeFalsy();
   });
-
 
   test("can update login timestamp", async function () {
     await db.query("UPDATE users SET last_login_at=NULL WHERE username='test'");
     let u = await User.get("test");
     expect(u.last_login_at).toBe(null);
 
-    User.updateLoginTimestamp("test");
+    await User.updateLoginTimestamp("test");
     let u2 = await User.get("test");
     expect(u2.last_login_at).not.toBe(null);
   });
@@ -66,7 +68,7 @@ describe("Test User class", function () {
       username: "test",
       first_name: "Test",
       last_name: "Testy",
-      phone: "+14155550000"
+      phone: "+14155550000",
     }]);
   });
 });
@@ -77,6 +79,7 @@ describe("Test messages part of User class", function () {
     await db.query("DELETE FROM users");
     await db.query("ALTER SEQUENCE messages_id_seq RESTART WITH 1");
 
+    // Register users for messaging tests
     let u1 = await User.register({
       username: "test1",
       password: "password",
@@ -91,15 +94,19 @@ describe("Test messages part of User class", function () {
       last_name: "Testy2",
       phone: "+14155552222",
     });
-    let m1 = await Message.create({
+    
+    // Create messages after users have been registered
+    await Message.create({
       from_username: "test1",
       to_username: "test2",
-      body: "u1-to-u2"
+      body: "u1-to-u2",
+      sent_at: new Date(),
     });
-    let m2 = await Message.create({
+    await Message.create({
       from_username: "test2",
       to_username: "test1",
-      body: "u2-to-u1"
+      body: "u2-to-u1",
+      sent_at: new Date(),
     });
   });
 
@@ -139,3 +146,5 @@ describe("Test messages part of User class", function () {
 afterAll(async function() {
   await db.end();
 });
+
+
