@@ -1,3 +1,9 @@
+const express = require('express');
+const Message = require('../models/message');
+const ExpressError = require('../expressError');
+const router = new express.Router();
+
+
 /** GET /:id - get detail of message.
  *
  * => {message: {id,
@@ -11,6 +17,14 @@
  *
  **/
 
+router.get('/:id', async function(req, res, next){
+    try{
+        const message = await Message.get(req.params.id);
+        return res.json({ message });
+    }catch(err){
+        return next(err);
+    }
+});
 
 /** POST / - post message.
  *
@@ -19,6 +33,14 @@
  *
  **/
 
+router.post('/', async function(req, res, next){
+    try{
+        const message = await Message.create(req.body);
+        return res.json({ message });
+    }catch(err){
+        return next(err)
+    }
+});
 
 /** POST/:id/read - mark message as read:
  *
@@ -28,3 +50,21 @@
  *
  **/
 
+router.post('/:id/read', async function(req, res, next){
+    try{
+        const message = await Message.get(req.params.id);
+        if(message.to_username !== req.user.username){
+            throw new ExpressError("Unauthorized", 401);
+        }else{
+            const message = await Message.markRead(req.params.id);
+            return res.json({ message });
+        }
+    }catch(err){
+        return next(err);
+    }
+})
+
+
+
+
+module.exports = router;
